@@ -1,38 +1,29 @@
+var glsl = require('glslify')
 var regl = require('regl')()
 var mesh = require('../')()
-var size = [0,0]
 
 var menu = regl({
-  frag: `
+  frag: glsl`
     precision highp float;
+    #pragma glslify: mask = require('../mask')
     varying vec2 vpos;
     uniform vec2 size, radius;
     void main () {
-      float dz = 10.0/min(size.x,size.y);
-      float r = length(vpos);
-      if (r < radius.x || r > radius.y) discard;
-      float d = smoothstep(radius.y-dz,radius.y,r)
-        + smoothstep(radius.x+dz,radius.x,r);
-      gl_FragColor = vec4(vec3(1.0-d),(1.0-d));
+      float m = mask(size, vpos, radius);
+      if (m < 0.01) discard;
+      gl_FragColor = vec4(vec3(1,0,1),m);
     }
   `,
-  vert: `
+  vert: glsl`
     precision highp float;
+    #pragma glslify: plot = require('../plot')
     attribute vec2 position;
     uniform vec2 size, theta;
     varying vec2 vpos;
     void main () {
-      vec2 aspect = vec2(
-        min(size.x,size.y)/size.x,
-        min(size.x,size.y)/size.y
-      );
-      float tau = ${Math.PI*2};
-      float th = min(theta.y,max(theta.x,position.x));
-      vpos = vec2(cos(th),sin(th)) * 2.0 * position.y;
-      float x = max(abs(vpos.x),abs(vpos.y))-0.001;
-      vpos.x = vpos.x / x;
-      vpos.y = vpos.y / x;
-      gl_Position = vec4(vpos*0.5*aspect,0,1);
+      vpos = plot(position, theta);
+      vec2 aspect = vec2(1,size.x/size.y);
+      gl_Position = vec4(vpos*aspect*0.5,0,1);
     }
   `,
   blend: {
@@ -41,9 +32,7 @@ var menu = regl({
   },
   uniforms: {
     size: function (context) {
-      size[0] = context.viewportWidth
-      size[1] = context.viewportHeight
-      return size
+      return [context.viewportWidth,context.viewportHeight]
     },
     theta: regl.prop('theta'),
     radius: regl.prop('radius')
@@ -54,12 +43,7 @@ var menu = regl({
   elements: mesh.cells
 })
 
-regl.frame(frame)
-//frame()
-//window.addEventListener('resize', frame)
-
-function frame (context) {
-  //regl.poll()
+regl.frame(function frame (context) {
   regl.clear({ color: [0,0,0,1], depth: true })
   var t = context.time
   menu([
@@ -67,4 +51,4 @@ function frame (context) {
     { theta: [1*(Math.sin(t)*0.5+0.5)*4,(Math.sin(t)*0.5+0.5)*2*Math.PI], radius: [0.5,0.75] },
     { theta: [2,(Math.sin(t)*0.5+0.5)*2*Math.PI], radius: [0.75,1] },
   ])
-}
+})

@@ -1,6 +1,6 @@
 {
   "name": "glsl-circular-arc",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "draw anti-aliased circular arcs in a shader with glslify",
   "main": "index.js",
   "devDependencies": {
